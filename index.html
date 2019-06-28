@@ -1,0 +1,190 @@
+<html>
+<head>
+<script type="text/javascript" src="https://unpkg.com/bsv@0.26.4/bsv.min.js"></script>
+<script type="text/javascript" src="src/handlebars-v4.1.2.js"></script>
+<script type="text/javascript" src="src/mxpub.js"></script>
+</head>
+<body>
+
+<style>
+    .leading-column {
+        width: 150px;
+    }
+    .align-center {
+        text-align: center;
+    }
+</style>
+<script>
+    document.addEventListener("DOMContentLoaded", function(event) {
+        addParticipant();
+    });
+</script>
+
+<h1>Multisig (P2SH) XPUB</h1>
+
+<script id="participantTemplate" type="text/x-handlebars-template">
+    <div style="padding-bottom:20px" id="par_{{id}}" width="100%">
+        Participant {{id}}
+        <table style="padding-left:20px">
+            <tr>
+                <td class="leading-column">Private Key</td>
+                <td><input type="text" id="par_private_{{id}}" size="80"/></td>
+                <td>
+                    <label><input type="checkbox" id="par_sign_{{id}}" value="yes" checked /> Sign</label>
+                    [<abbr title="This participant should sign the transaction">?</abbr>]
+                </td>
+            </tr>
+            <tr>
+                <td>Public Key</td><td><input type="text" id="par_public_{{id}}" size="80"/></td>
+                <td><input type="submit" name="btn_par_public_{{id}}" value="Generate" onclick="generatePublic({{id}})"/></td>
+            </tr>
+        </table>
+    </div>
+</script>
+
+<div style="padding-bottom:20px">
+    <div id="participantList">
+    </div>
+
+    <button type="button" onclick="addParticipant()">
+        Add Another Participant
+    </button>
+    <hr />
+</div>
+
+<div style="padding-bottom:20px">
+    Required Signatures
+    <table style="padding-left:20px">
+        <tr>
+            <td class="leading-column">Required Sigs</td>
+            <td><input type="text" id="requiredSigs" size="2" value="0" /></td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="leading-column">mPath</td>
+            <td><input type="text" id="finalMPath" size="20" value="m/0/1" /></td>
+            <td>&nbsp;</td>
+        </tr>
+    </table>
+</div>
+
+<script id="pubKeyTemplate" type="text/x-handlebars-template">
+    {{#each keys}}
+    <tr>
+        <td class="leading-column align-center">[{{id}}]:</td>
+        <td>{{key}}</td>
+    </tr>
+    {{/each}}
+</script>
+
+<div style="padding-bottom:20px">
+    Public Keys
+    <table style="padding-left:20px">
+        <thead>
+            <tr>
+                <th class="leading-column">Participant</th>
+                <th>Key</th>
+            </tr>
+        </thead>
+        <tbody id="pubKeyList"></tbody>
+    </table>
+</div>
+
+<div style="padding-bottom:20px">
+    Address
+    <table style="padding-left:20px">
+        <tr>
+            <td class="leading-column">PKH</td>
+            <td id="finalAddress"></td>
+        </tr>
+    </table>
+</div>
+
+<div style="padding-bottom:20px">
+    <input type="submit" name="gen_master" value="Generate Address" onclick="generateAddress()"/>
+    <hr />
+</div>
+
+<div style="padding-bottom:20px">
+    UTXO
+    <table style="padding-left:20px">
+        <tr>
+            <td class="leading-column">Transaction ID</td>
+            <td><input type="text" id="spendTxID" size="75" value="153068cdd81b73ec9d8dcce27f2c77ddda12dee3db424bff5cafdbe9f01c1756" /></td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="leading-column">Output Index</td>
+            <td><input type="text" id="spendTxOut" size="2" value="0" /></td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="leading-column">Value</td>
+            <td><input type="text" id="spendInputValue" size="10" value="20000" /></td>
+            <td>&nbsp;</td>
+        </tr>
+    </table>
+</div>
+
+<div style="padding-bottom:20px">
+    Destination
+    <table style="padding-left:20px">
+        <tr>
+            <td class="leading-column">Address</td>
+            <td><input type="text" id="spendTo" size="75" value="mtoKs9V381UAhUia3d7Vb9GNak8Qvmcsme" /></td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="leading-column">Value</td>
+            <td><input type="text" id="spendAmount" size="10" value="20000" /></td>
+            <td>&nbsp;</td>
+        </tr>
+    </table>
+</div>
+
+<div style="padding-bottom:20px">
+    <input type="submit" name="gen_tx" value="Generate Transaction" onclick="generateTransaction()"/>
+    <hr />
+</div>
+
+<script id="signTemplate2" type="text/x-handlebars-template">
+    <div style="padding-bottom:20px" id="sign_{{id}}" width="100%">
+        Participant {{id}}
+        <table style="padding-left:20px">
+            <tr>
+                <td>Private Key</td><td id="finalPrivKey_{{id}}">{{key}}</td>
+            </tr>
+            <tr>
+                <td colspan="100"><input type="submit" name="btn_sign_{{id}}" value="Sign" onclick="signFor({{id}})"/></td>
+            </tr>
+        </table>
+    </div>
+</script>
+
+<script id="signTemplate" type="text/x-handlebars-template">
+    {{#each keys}}
+    <tr>
+        <td class="leading-column align-center">[{{id}}]:</td>
+        <td id="finalPrivKey_{{id}}">{{key}}</td>
+        <td><input type="submit" id="btnSignFor_{{id}}" class="sign-button" name="btn_sign_{{id}}" value="Sign" onclick="signFor({{id}})"/></td>
+    </tr>
+    {{/each}}
+</script>
+
+<div style="padding-bottom:20px">
+    Private Keys
+    <table style="padding-left:20px">
+        <thead>
+            <tr>
+                <th class="leading-column">Participant</th>
+                <th>WIF</th>
+            </tr>
+        </thead>
+        <tbody id="signerList"></tbody>
+    </table>
+</div>
+
+<textarea id="finalTx" cols="100" rows="10"></textarea>
+
+</body>
+</html>
